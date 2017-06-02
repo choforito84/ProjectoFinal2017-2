@@ -1,4 +1,6 @@
 #funciones auxiliares
+#module fluir
+using Plots
 function girar(A, n::Int64; axis::Int64=1)
     if n<=0
         n=abs(n)
@@ -31,8 +33,7 @@ end
 
 dir=Dict(""=>1,"N"=>2,"S"=>3,"E"=>4,"O"=>5,"NE"=>6,"NO"=>7,"SE"=>8,"SO"=>9)
 #parámetros del flujo
-dims=(30,10)
-iter=5
+dims=(100,30)
 #c=k/h
 c=0.5
 omega=1
@@ -64,7 +65,7 @@ for i in 2:9
     B[i]=girar(Barr,E[i][1],axis=1)
     B[i]=girar(B[i],E[i][2],axis=2)
 end
-function mover()
+function mover(N)
     #movemos las partículas en cada dirección hacia su dirección dada
     for i in 1:9
         N[i]=girar(N[i],E[i][1],axis=1)
@@ -80,10 +81,9 @@ function mover()
     N[dir["NO"]][B[dir["NO"]]]=N[dir["SE"]][Barr]
     N[dir["SE"]][B[dir["SE"]]]=N[dir["NO"]][Barr]
     N[dir["SO"]][B[dir["SO"]]]=N[dir["NE"]][Barr]
+    return N
 end
-
-function colisionar()
-    global rho, ux, uy
+function colisionar(N)
     NEQ=[zeros(dims) for i in 1:9]
     rho=sum([N[i] for i in 1:9])
     ux=[E[j][1]*N[j] for j in 1:9]
@@ -95,12 +95,22 @@ function colisionar()
         NEQ[i]=rho.*W[i].*(1+3*(E[i][1]*ux+E[i][2]*uy)+9/2*(E[i][1]*ux+E[i][2]*uy).^2 -3/2*(ux.^2+uy.^2))
         N[i]=N[i]+omega*(NEQ[i]-N[i])
     end
+    return (N,rho,ux,uy)
 end
-colisionar()
-for t in 1:iter
-    mover()
-    colisionar()
+iter=50
+anim= @animate for t in 1:iter
+    println(t) 
+    N=mover(N)
+    A=colisionar(N)
+    global N=A[1]
+    global rho=A[2]
+    global ux=A[3]
+    global uy=A[4]
+    heatmap(rho')
 end
-using Plots
-gr()
-heatmap(rho)
+
+gif(anim,"../gifs/flujo1.gif",fps=4)
+
+#export girar, mover, colisionar, dir, dims, c, omega, U, E, W, N, Barr, B
+
+#end

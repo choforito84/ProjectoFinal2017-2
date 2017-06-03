@@ -1,6 +1,7 @@
 #funciones auxiliares
 #module fluir
 using Plots
+s=Dates.time()
 function girar(A, n::Int64; axis::Int64=1)
     if n<=0
         n=abs(n)
@@ -33,11 +34,11 @@ end
 
 dir=Dict(""=>1,"N"=>2,"S"=>3,"E"=>4,"O"=>5,"NE"=>6,"NO"=>7,"SE"=>8,"SO"=>9)
 #parámetros del flujo
-dims=(100,30)
+dims=(300,100)
 #c=k/h
 c=0.5
-omega=1
-U=[1,0] 
+omega=1.5
+U=[0.1,0] 
 E=[[0,0],
 [0,1],
 [0,-1],
@@ -97,9 +98,22 @@ function colisionar(N)
     end
     return (N,rho,ux,uy)
 end
-iter=50
-anim= @animate for t in 1:iter
-    println(t) 
+#construir directorio para la salida y crear log
+dest=Dates.format(Dates.now(),"HH;MM;SS dd-mm-Y")
+
+mkdir("../gifs/$(dest)")
+
+write("../gifs/$(dest)/log.txt")
+println(dest)
+open("../gifs/$(dest)/log.txt","w") do f
+        write(f,"Fluid simulation with Lattice-Boltzmann. Date: $(Dates.format(Dates.now(),"HH:MM:SS dd-mm-Y")) \n \n")
+        write(f,"Viscosity factor = $omega \n")
+        write(f,"Fluid speed = $U \n")
+    end
+
+iter=10
+println("Building gif \n")
+anim= @animate for t in 1:iter 
     N=mover(N)
     A=colisionar(N)
     global N=A[1]
@@ -109,8 +123,12 @@ anim= @animate for t in 1:iter
     heatmap(rho')
 end
 
-gif(anim,"../gifs/flujo1.gif",fps=4)
+
+
+gif(anim,"../gifs/$(dest)/densidad.gif",fps=5)
+
+println("Time spent creating gif $(round(Dates.time()-s,2))")
+
 
 #export girar, mover, colisionar, dir, dims, c, omega, U, E, W, N, Barr, B
-
 #end

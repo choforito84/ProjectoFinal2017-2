@@ -1,95 +1,6 @@
-#funciones auxiliares
-#module fluir
-using Plots
+include("./aux.jl")
+using Plots, auxiliares
 s=Dates.time()
-function girar(A, n::Int64; axis::Int64=1)
-    if n<=0
-        n=abs(n)
-        if axis==1
-            B=copy(A[(n+1):end,:])
-            B=vcat(B,A[1:n,:])
-            return B
-        elseif axis==2
-            B=copy(A[:,(n+1):end])
-            B=hcat(B,A[:,1:n])
-            return B
-        end
-    elseif n>=0
-        if axis==1
-            B=copy(A[1:(end-n),:])
-            B=vcat(A[(end-n+1):end,:],B)
-            return B
-        elseif axis==2
-            B=copy(A[:,1:(end-n)])
-            B=hcat(A[:,(end-n+1):end],B)
-            return B
-        end
-    end
-end
-function girarzeros(A, n::Int64; axis::Int64=1)
-    if n<=0
-        n=abs(n)
-        if axis==1
-            B=zeros(size(A[(n+1):end,:]))
-            B=vcat(B,A[1:n,:])
-            return B
-        elseif axis==2
-            B=zeros(size(A[:,(n+1):end]))
-            B=hcat(B,A[:,1:n])
-            return B
-        end
-    elseif n>=0
-        if axis==1
-            B=zeros(size(A[1:(end-n),:]))
-            B=vcat(A[(end-n+1):end,:],B)
-            return B
-        elseif axis==2
-            B=zeros(size(A[:,1:(end-n)]))
-            B=hcat(A[:,(end-n+1):end],B)
-            return B
-        end
-    end
-end
-function girarones(A, n::Int64; axis::Int64=1)
-    if n<=0
-        n=abs(n)
-        if axis==1
-            B=ones(size(A[(n+1):end,:]))
-            B=vcat(B,A[1:n,:])
-            return B
-        elseif axis==2
-            B=ones(size(A[:,(n+1):end]))
-            B=hcat(B,A[:,1:n])
-            return B
-        end
-    elseif n>=0
-        if axis==1
-            B=ones(size(A[1:(end-n),:]))
-            B=vcat(A[(end-n+1):end,:],B)
-            return B
-        elseif axis==2
-            B=ones(size(A[:,1:(end-n)]))
-            B=hcat(A[:,(end-n+1):end],B)
-            return B
-        end
-    end
-end
-function rotacional(ux,uy;h=1)
-    if size(ux)!=size(uy)
-        error("El tamaño de las matrices debe coincidir")
-    end
-    resultado=girar(uy,1,axis=1)-girar(uy,-1,axis=1) -(girar(ux,1,axis=2)-girar(ux,-1,axis=2))
-    resultado=resultado[2:(end-1),2:(end-1)]
-    return resultado
-end
-
-function circulo(A;r::Float64=1.0,C=[0.0,0.0])
-    if abs(norm(A-C))<=r
-        return true
-    else
-        return false
-    end
-end 
 
 #todas las matrices tendrán la siguiente orientación: la primera entrada (renglón) representa la coordenada x y la segunda entrada (columna) la coordenada en y. 
 #Aunque este es el orden usual, en una matriz este orden está transpuesto, por lo que es importante la aclaración
@@ -109,9 +20,9 @@ elseif length(ARGS)>=2
 elseif length(ARGS)>=3
     barrera=ARGS[3]
 else
-    omega=0.04
-    vel=0.12
-    barrera="o"
+    omega=0.02
+    vel=0.1
+    barrera="|"
 end
 if omega>0.3 || omega<0.005
     error("Flujo inestable para viscosidad cinemática ν = $(omega)")    
@@ -162,6 +73,29 @@ function mover(N)
         N[i]=girar(N[i],E[i][1],axis=1)
         N[i]=girar(N[i],E[i][2],axis=2)
     end
+    #insertando particulas por el lado izquierdo
+    N[dir["E"]][1,:]=1/9*(1+3*norm(U)+3*norm(U)^2)
+    N[dir["SE"]][1,:]=1/36*(1+3*norm(U)+3*norm(U)^2)
+    N[dir["NE"]][1,:]=1/36*(1+3*norm(U)+3*norm(U)^2)
+    #insertando particulas por el lado derecho
+    N[dir["O"]][end,:]=1/9*(1+3*norm(U)+3*norm(U)^2)
+    N[dir["SO"]][end,:]=1/36*(1+3*norm(U)+3*norm(U)^2)
+    N[dir["NO"]][end,:]=1/36*(1+3*norm(U)+3*norm(U)^2)
+
+    #Asignando valores fijos para la frontera superior e inferior como condiciones de frontera
+ 	N[dir["E"]][:,1] = 1/9 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["O"]][:,1] = 1/9 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["NE"]][:,1] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["SE"]][:,1] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["NO"]][:,1] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["SO"]][:,1] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+    N[dir["E"]][:,end] = 1/9 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["O"]][:,end] = 1/9 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["NE"]][:,end] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["SE"]][:,end] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["NO"]][:,end] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+	N[dir["SO"]][:,end] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
+
     #Añadimos a densidad de los vecinos a la barrera las partículas que colisionaron con esta barrera
     N[dir["N"]][B[dir["N"]]]=N[dir["S"]][Barr]
     N[dir["S"]][B[dir["S"]]]=N[dir["N"]][Barr]
@@ -172,6 +106,12 @@ function mover(N)
     N[dir["NO"]][B[dir["NO"]]]=N[dir["SE"]][Barr]
     N[dir["SE"]][B[dir["SE"]]]=N[dir["NO"]][Barr]
     N[dir["SO"]][B[dir["SO"]]]=N[dir["NE"]][Barr]
+    
+    #ajustando valores en la frontera izquierda y derecha
+    N[dir["O"]][end,:]= N[dir["O"]][end-1,:]
+    N[dir["SO"]][end,:]=N[dir["SO"]][end-1,:]
+    N[dir["NO"]][end,:]=N[dir["NO"]][end-1,:]
+
     return N
 end
 function colisionar(N)
@@ -186,43 +126,21 @@ function colisionar(N)
         NEQ[i]=rho.*W[i].*(1+3*(E[i][1]*ux+E[i][2]*uy)+9/2*(E[i][1]*ux+E[i][2]*uy).^2 -3/2*(ux.^2+uy.^2))
         N[i]=N[i]+omega*(NEQ[i]-N[i])
     end
-    #Forzamiento debido a condiciones de frontera
- 	N[dir["N"]][1,:] = 1/9 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-	N[dir["S"]][1,:] = 1/9 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-	N[dir["NE"]][1,:] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-	N[dir["SE"]][1,:] = 1/36 * (1 + 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-	N[dir["NO"]][1,:] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-	N[dir["SO"]][1,:] = 1/36 * (1 - 3*norm(U) + 4.5*norm(U)^2 - 1.5*norm(U)^2)
-
     return (N,rho,ux,uy)
 end
 #construir directorio para la salida y crear log
 dest=Dates.format(Dates.now(),"HH;MM;SS dd-mm-Y")
-
 mkdir("../gifs/$(dest)")
-
 write("../gifs/$(dest)/log.txt")
-println(dest)
 open("../gifs/$(dest)/log.txt","w") do f
-        write(f,"Fluid simulation with Lattice-Boltzmann. Date: $(Dates.format(Dates.now(),"HH:MM:SS dd-mm-Y")) \n \n")
-        write(f,"Viscosity factor = $omega \n")
-        write(f,"Fluid speed = $U \n")
+        write(f,"Simulación de flujo unidireccional con algoritmo de Lattice-Boltzmann. Fecha: $(Dates.format(Dates.now(),"HH:MM:SS dd-mm-Y")) \n \n")
+        write(f,"Barrera: $(barrera)")
+        write(f,"Viscosidad cinemática = $(omega) \n")
+        write(f,"Velocidad del fluido = $U \n")
     end
 
-iter=1200
-println("Making simulation \n")
-
-"""
-anim= @animate for t in 1:iter 
-    N=mover(N)
-    A=colisionar(N)
-    global N=A[1]
-    global rho=A[2]
-    global ux=A[3]
-    global uy=A[4]
-    heatmap(rho',zlim=(0.8,1.2))
-end
-"""
+iter=7200
+println("Haciendo simulación \n")
 F=[]
 push!(F,(N,zeros(dims),zeros(dims),zeros(dims)))
 for i in 1:iter
@@ -230,33 +148,33 @@ for i in 1:iter
     push!(F,colisionar(N))
 end
 
-println("Building animations \n")
-anim= @animate for t in 2:10:iter 
+println("Construyendo animaciones \n")
+anim= @animate for t in 2:30:iter
     heatmap((F[t][2])',clim=(0.8,1.2),color=:curl,aspect_ratio=:equal)
 end
 gif(anim,"../gifs/$(dest)/densidad.gif",fps=30)
 
-anim= @animate for t in 2:10:iter 
+anim= @animate for t in 2:30:iter
+ 
     heatmap((rotacional(F[t][3],F[t][4]))',clim=(-0.25,0.25),color=:curl,aspect_ratio=:equal)
 end
 gif(anim,"../gifs/$(dest)/rot.gif",fps=30)
 
-anim= @animate for t in 2:10:iter
+anim= @animate for t in 2:30:iter
+
     heatmap(sqrt(F[t][3].^2 + F[t][4].^2)',clim=(0.0,vel*1.5),color=:curl,aspect_ratio=:equal)
 end
 gif(anim,"../gifs/$(dest)/vel.gif",fps=30)
-anim= @animate for t in 2:10:iter  
+anim= @animate for t in 2:30:iter
+  
     heatmap((F[t][3])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal)
 end
 gif(anim,"../gifs/$(dest)/velx.gif",fps=30)
-anim= @animate for t in 2:10:iter 
+anim= @animate for t in 2:30:iter
     heatmap((F[t][4])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal)
 end
 gif(anim,"../gifs/$(dest)/vely.gif",fps=30)
+println("Tiempo para realizar animaciones: $(round(Dates.time()-s,2)) segs")
 
-println("Time spent creating animations: $(round(Dates.time()-s,2)) segs")
 
-
-#export girar, mover, colisionar, dir, dims, c, omega, U, E, W, N, Barr, B
-#end
 

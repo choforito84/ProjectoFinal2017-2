@@ -1,3 +1,6 @@
 /.vscode
 /test
 /gifs
+
+/outputs/*
+!/outputs/README.md

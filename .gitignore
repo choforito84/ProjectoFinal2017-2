@@ -4,3 +4,4 @@
 
 /outputs/*
 !/outputs/README.md
+!/outputs/demo

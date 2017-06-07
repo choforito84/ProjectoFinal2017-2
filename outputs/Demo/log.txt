@@ -1,0 +1,6 @@
+Simulación de flujo unidireccional con algoritmo de Lattice-Boltzmann. Fecha: 09:20:27 07-06-2017 
+ 
+Viscosidad cinemática = 1.7857142857142856 
+Velocidad del fluido = [0.1,0.0] 
+Barrera: |
+Geometría de la superficie = normal 

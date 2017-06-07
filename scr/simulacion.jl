@@ -27,20 +27,27 @@ if length(ARGS)>=3
 else
     barrera="|"
 end
-if length(ARGS)>=3
+if length(ARGS)>=4
     geometria=ARGS[4]
 else
-    geometría="normal"
+    geometria="normal"
 end
+#arrojar errores para valores fuera de parámetros normales
 if omega>0.3 || omega<0.005
     error("Flujo inestable para viscosidad cinemática ν = $(omega)")    
 end
 if vel>0.2 || vel<0.005
     error("Flujo inestable para velocidad de tunel v= $(vel)")    
 end
+if barrera!="|" && barrera!="o"
+    error("$(barrera) no es una barrera aceptable")
+end
 
-c=1
-omega=1/(3*omega+0.5)
+if geometria!="normal" && geometria!="anillo" && geometria!="toro"
+    error("$(geometria) no es una geometria aceptable")
+end
+
+a=1/(3*omega+0.5)
 U=vel*[1,0] 
 E=[[0,0],
 [0,1],
@@ -74,6 +81,11 @@ for i in 2:9
     B[i]=girar(Barr,E[i][1],axis=1)
     B[i]=girar(B[i],E[i][2],axis=2)
 end
+
+#inicializamos particulas virtuales para rastrear su movimiento
+particulasx=linspace(0,dims[1],12)[2:(end-1)]
+particulasy=linspace(0,dims[2],12)[2:(end-1)]
+particulas=[ [px,py] for px in particulasx, py in particulasy]
 
 #distintas definiciones de la funcion de movimiento, dependiendo de la geometría que le queramos dar al problema
 
@@ -211,42 +223,82 @@ open("../outputs/$(dest)/log.txt","w") do f
         write(f,"Geometría de la superficie = $geometria \n")
     end
 
-iter=7200
+
+
+
+#iteración importante para la simulación
+iter=1200
 println("Realizando simulación \n")
+
+
 F=[]
+P=[]
 push!(F,(N,zeros(dims),zeros(dims),zeros(dims)))
-for i in 1:iter
-    N=mover(F[i][1])
+push!(P,particulas)
+for k in 1:iter
+    for i in 1:10
+        for j in 1:10
+            x=convert(Int64,floor(particulas[i,j][1]))
+            y=convert(Int64,floor(particulas[i,j][2]))
+            particulas[i,j]+= [F[k][3][x,y],F[k][4][x,y]]
+            if particulas[i,j][1]>=299
+                particulas[i,j][1]=2
+            end
+            if particulas[i,j][1]<=2
+                particulas[i,j][1]=2
+            end
+            if particulas[i,j][2]>=99
+                particulas[i,j][2]=99
+            end
+            if particulas[i,j][2]<=2
+                particulas[i,j][2]=2
+            end
+        end
+    end
+    push!(P,copy(particulas))
+    N=mover(F[k][1])
     push!(F,colisionar(N))
 end
 
+
+
+
 println("Construyendo animaciones \n")
 using Plots
+
 anim= @animate for t in 2:30:iter
-    heatmap((F[t][2])',clim=(0.8,1.2),color=:curl,aspect_ratio=:equal)
+    heatmap((F[t][2])',clim=(0.8,1.2),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="densidad")
 end
 gif(anim,"../outputs/$(dest)/densidad.gif",fps=30)
 
 anim= @animate for t in 2:30:iter
  
-    heatmap((rotacional(F[t][3],F[t][4]))',clim=(-0.25,0.25),color=:curl,aspect_ratio=:equal)
+    heatmap((rotacional(F[t][3],F[t][4]))',clim=(-0.25,0.25),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="vorticidad")
 end
 gif(anim,"../outputs/$(dest)/rot.gif",fps=30)
 
 anim= @animate for t in 2:30:iter
 
-    heatmap(sqrt(F[t][3].^2 + F[t][4].^2)',clim=(0.0,vel*1.5),color=:curl,aspect_ratio=:equal)
+    heatmap(sqrt(F[t][3].^2 + F[t][4].^2)',clim=(0.0,vel*1.5),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="rapidez")
 end
 gif(anim,"../outputs/$(dest)/vel.gif",fps=30)
 anim= @animate for t in 2:30:iter
   
-    heatmap((F[t][3])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal)
+    heatmap((F[t][3])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="velocidad en x")
 end
 gif(anim,"../outputs/$(dest)/velx.gif",fps=30)
 anim= @animate for t in 2:30:iter
-    heatmap((F[t][4])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal)
+    heatmap((F[t][4])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="velocidad en y")
 end
 gif(anim,"../outputs/$(dest)/vely.gif",fps=30)
+anim= @animate for t in 2:30:iter
+    X=[P[t][i,j][1] for i in 1:10 for j in 1:10]
+    Y=[P[t][i,j][2] for i in 1:10 for j in 1:10]
+    scatter(X,Y,xlim=(0.0,dims[1]),ylim=(0,dims[2]))
+end
+gif(anim,"../outputs/$(dest)/part.gif",fps=30)
+
+
 println("Tiempo para realizar animaciones: $(round(Dates.time()-s,2)) segs")
 
 

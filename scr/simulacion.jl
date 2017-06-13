@@ -46,8 +46,8 @@ end
 if geometria!="normal" && geometria!="anillo" && geometria!="toro"
     error("$(geometria) no es una geometria aceptable")
 end
-
-a=1/(3*omega+0.5)
+c=1
+omega=1/(3*omega+0.5)
 U=vel*[1,0] 
 E=[[0,0],
 [0,1],
@@ -227,7 +227,7 @@ open("../outputs/$(dest)/log.txt","w") do f
 
 
 #iteración importante para la simulación
-iter=1200
+iter=7200
 println("Realizando simulación \n")
 
 
@@ -264,6 +264,7 @@ end
 
 
 println("Construyendo animaciones \n")
+
 using Plots
 
 anim= @animate for t in 2:30:iter
@@ -291,6 +292,8 @@ anim= @animate for t in 2:30:iter
     heatmap((F[t][4])',clim=(-vel,vel),color=:curl,aspect_ratio=:equal,xlabel="x",ylabel="y",title="velocidad en y")
 end
 gif(anim,"../outputs/$(dest)/vely.gif",fps=30)
+
+
 anim= @animate for t in 2:30:iter
     X=[P[t][i,j][1] for i in 1:10 for j in 1:10]
     Y=[P[t][i,j][2] for i in 1:10 for j in 1:10]
